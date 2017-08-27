@@ -51,22 +51,16 @@ def Make2DHistogramClassifier(X1,X2,T,B,xmin,xmax,ymin,ymax):
     HP=np.zeros((B,B)).astype(float)
     HN=np.zeros((B,B)).astype(float)
     binindices_x=(np.round(((B-1)*(X1-xmin)/(xmax-xmin)))).astype('int32')
-    for i,b in enumerate(binindices_x):
-        if b < 0:
-            binindices_x[i] = 0
-        if b > 24:
-            binindices_x = 24
     binindices_y=(np.round(((B-1)*(X2-ymin)/(ymax-ymin)))).astype('int32')
-    for i,b in enumerate(binindices_y):
-        if b < 0:
-            binindices_y[i] = 0
-        if b > 24:
-            binindices_y = 24
     for i,b1 in enumerate(binindices_x):
+        b1 = max(b1,0)
+        b1 = min(b1,24)
+        by = max(binindices_y[i],0)
+        by = min(by,24)
         if T[i]==1:
-            HP[b1][binindices_y[i]]+= 1;
+            HP[b1][by]+= 1;
         else:
-            HN[b1][binindices_y[i]]+= 1;
+            HN[b1][by]+= 1;
     return [HP,HN]
 
 def queryHisto(histoData, queryX, queryY, xmin, xmax, ymin, ymax):
@@ -110,6 +104,9 @@ def getPrinComp(X):
     lmd = np.flipud(lmd)
     V = np.flipud(V.T)
     P = np.dot(Z, V.T);
+    R = np.dot(P,V);
+    print ((np.dot(P[:,0:2],V[0:2,:])+mu)[0])
+    print (X[0])
     return P
 
 def getAccuracy(testset, histo, labels, xmin, xmax, ymin, ymax):
@@ -129,16 +126,15 @@ def getAccuracy(testset, histo, labels, xmin, xmax, ymin, ymax):
                 truePos += 1
             else:
                 falseNeg += 1
-    # print "True Positive:", truePos
-    # print "True Negative:", trueNeg
-    # print "False Positive:", falsePos
-    # print "False Negative:", falseNeg
+    print np.array([[truePos,falseNeg],[falsePos,trueNeg]])
     accuracy = (truePos+trueNeg)/float(truePos+trueNeg+falsePos+falseNeg)
     return accuracy
 
 def density(target, data):
-    cv = np.cov(data)
+    cv = np.cov(data, rowvar=False)
     dt = np.linalg.det(cv)
+    # slogdt = np.linalg.slogdet(cv)
+    # print "slogdet", np.exp(slogdt[0]*slogdt[1])
     a = np.linalg.inv(cv)
     tg = target[0]-np.mean(data[0]), target[1]-np.mean(data[1])
     return (1/(2*math.pi*pow(dt,0.5)))*math.exp(-.5*(a[0][0]*pow(tg[0],2)+2*(a[0][1]*tg[0]*tg[1])+a[1][1]*pow(tg[1],2)))
@@ -147,20 +143,62 @@ def main():
     data = readExcel(DATA_FILE, sheetname="X_a_With_Class_Label", startrow=2, endrow=1517, startcol=1, endcol=10);
     X = removeNan(data).astype(float);
     P = getPrinComp(X[:,:9])
-    for i,b in enumerate(X[:,:9]):
-        print i,b
-        print i,P[i]
-    scatterplot(P, X[:,9], True)
-    histo = Make2DHistogramClassifier(P[:,0], P[:,1], X[:,9], 25, np.min(P[:,0]), np.max(P[:,0]), np.min(P[:,1]), np.max(P[:,1]))
-    histoAccuracy = getAccuracy(P, histo, X[:,9], np.min(P[:,0]), np.max(P[:,0]), np.min(P[:,1]), np.max(P[:,1]))
-    print "accuracy:", histoAccuracy
-    # for i,b in enumerate(P):
-    #     try:
-    #         d = density(b[0:2],P[:,:2])
-    #         print i, ":", d
-    #     except OverflowError:
-    #         print i, ":", "OverflowError"
-    # print "Accuracy:", histoAccuracy
+    P_pos =[]
+    P_neg =[]
+    for i,b in enumerate(P):
+        if X[i,9] == 1:
+            P_pos.append(b)
+        else:
+            P_neg.append(b)
+    # print ("P_pos", P_pos)
+    P_pos = np.array(P_pos)
+    P_neg = np.array(P_neg)
+
+    # for i,b in enumerate(X[:,:9]):
+    #     print i,b
+    #     print i,P[i]
+    # scatterplot(P, X[:,9], True)
+    xq1 = np.percentile(P[:,0],25)
+    xq3 = np.percentile(P[:,0],75)
+    yq1 = np.percentile(P[:,1],25)
+    yq3 = np.percentile(P[:,1],75)
+    x_lower = xq1 - 1.5*(xq3-xq1)
+    x_upper = xq3 + 1.5*(xq3-xq1)
+    y_lower = yq1 - 1.5*(yq3-yq1)
+    y_upper = yq3 + 1.5*(yq3-yq1)
+    histo = Make2DHistogramClassifier(P[:,0], P[:,1], X[:,9], 25, x_lower, x_upper, y_lower, y_upper)
+    plt.imshow(histo[0], interpolation=None, cmap=cm.gray)
+    # show()
+    plt.imshow(histo[1], interpolation=None, cmap=cm.gray)
+    # show()
+    histoAccuracy = getAccuracy(P, histo, X[:,9], x_lower, x_upper, y_lower, y_upper)
+    # print ("accuracy:", histoAccuracy)
+    bayes_tPos = 0
+    bayes_fNeg = 0
+    bayes_fPos = 0
+    bayes_tNeg = 0
+    for i,b in enumerate(P):
+        try:
+            correct = False
+            dPos = density(b[0:2],P_pos[:,:2])
+            dNeg = density(b[0:2],P_neg[:,:2])
+            probPos = dPos / float(dPos+dNeg)
+            if probPos > 0.5:
+                if X[i,9] == 1:
+                    bayes_tPos += 1
+                    correct = True
+                else:
+                    bayes_fPos += 1
+            else:
+                if X[i,0] == 1:
+                    bayes_fNeg += 1
+                else:
+                    bayes_tNeg += 1
+                    correct = True
+            # print i, ":", probPos, correct
+        except OverflowError:
+            print i, ":", "OverflowError"
+    print np.array([[bayes_tPos,bayes_fNeg],[bayes_fPos,bayes_tNeg]])
 
 
 main();
