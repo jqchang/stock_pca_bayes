@@ -1,0 +1,53 @@
+******Linear Confusion Matrix******
+[[408 119]
+ [300 190]]
+Accuracy: 0.588003933137
+Sensitivity: 0.774193548387
+Specificity: 0.387755102041
+PPV: 0.576271186441
+NPV: 0.614886731392
+/Users/jqchang/Documents/MachineLearning/Project/pca_bayes/pca_bayes.py:78: RuntimeWarning: invalid value encountered in double_scalars
+  return histoData[0][bin_p1][bin_p2]/float(histoData[0][bin_p1][bin_p2]+histoData[1][bin_p1][bin_p2])
+******Histogram Confusion Matrix******
+[[448 491]
+ [  0  78]]
+Accuracy: 0.51720747296
+Sensitivity: 0.477103301384
+Specificity: 1.0
+PPV: 1.0
+NPV: 0.137082601054
+******Bayesian Confusion Matrix******
+[[223 304]
+ [217 273]]
+Accuracy: 0.487708947886
+Sensitivity: 0.423149905123
+Specificity: 0.557142857143
+PPV: 0.506818181818
+NPV: 0.473136915078
+******2016 data as testing set******
+Histogram Classifier:
+Unclassifiable: 8
+[[17 29]
+ [27 27]]
+Accuracy: 0.44
+Sensitivity: 0.369565217391
+Specificity: 0.5
+PPV: 0.386363636364
+NPV: 0.482142857143
+Bayesian Classifier:
+[[ 3 46]
+ [ 1 58]]
+Accuracy: 0.564814814815
+Sensitivity: 0.0612244897959
+Specificity: 0.983050847458
+PPV: 0.75
+NPV: 0.557692307692
+Linear Classifier:
+[[37 12]
+ [49 10]]
+Accuracy: 0.435185185185
+Sensitivity: 0.755102040816
+Specificity: 0.169491525424
+PPV: 0.43023255814
+NPV: 0.454545454545
+******End 2016 data testing set******

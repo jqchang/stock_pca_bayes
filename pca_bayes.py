@@ -90,7 +90,8 @@ def removeNan(data):
 
 def getPrinComp(X):
     mu = np.mean(X, axis=0);
-    Z = X - mu;
+    stdev = np.std(X, axis=0);
+    Z = (X - mu)/stdev;
     C = np.cov(Z.astype(float), rowvar=False)
     [lmd, V] = np.linalg.eigh(C)
     lmd = np.flipud(lmd)
@@ -214,9 +215,9 @@ def main():
     linear_weights = linear(np.c_[np.ones(X.shape[0]).T, X[:,:9]], X[:,9]);
     PCAClassifier = getPrinComp(X[:,:9])
     P = PCAClassifier["P"]
-    Z_test = X_test[:,:9] - PCAClassifier["mu"]
+    Z_test = (X_test[:,:9] - PCAClassifier["mu"])/np.std(X_test[:,:9],axis=0)
     P_test = np.dot(Z_test, PCAClassifier["V"].T)
-    exportText("P_minus2016.txt", P, X[:,9]);
+    exportText("P_normalized.txt", P, X[:,9]);
 
     # Separate data into positive/negative classes to make Bayesian classifier
     P_pos =[]
@@ -228,7 +229,6 @@ def main():
             P_neg.append(b)
     P_pos = np.array(P_pos)
     P_neg = np.array(P_neg)
-    # scatterplot(P_pos,P_neg,True)
 
     # Customize boundaries to account for outliers in histogram
     xq1 = np.percentile(P[:,0],25)
@@ -318,7 +318,7 @@ def main():
     plt.scatter(P_pos[:,0],P_pos[:,1], color='r', alpha=.3, s=20)
     plt.scatter(P_neg[:,0],P_neg[:,1], color='b', alpha=.3, s=20)
     plt.scatter(P_test[:,0],P_test[:,1],color='g',alpha=.3, s=20)
-    # show()
+    show()
 
 
 main();
